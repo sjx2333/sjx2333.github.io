@@ -1,0 +1,21 @@
+{
+  "name": "KOTOBA AI 题库练习",
+  "short_name": "KOTOBA 题库",
+  "start_url": "./bank.html",
+  "display": "standalone",
+  "background_color": "#faf7f7",
+  "theme_color": "#ee1d25",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "logo_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo_icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

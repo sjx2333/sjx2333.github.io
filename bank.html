@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ee1d25">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="logo_icon.png">
+    <title>KOTOBA AI · 题库练习</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=bank-20261018-3">
+    <link rel="stylesheet" href="bank.css?v=bank-20261018-3">
+</head>
+<body>
+    <div class="bg-blobs" aria-hidden="true"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+    <main class="app-container">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">KOTOBA AI</p>
+                <h1>题库练习</h1>
+            </div>
+            <div class="topbar-stat"><strong id="header-level">N3</strong><span>当前题库</span></div>
+        </header>
+
+        <section id="home-view" class="view">
+            <div class="intro">
+                <p class="eyebrow">选择题库</p>
+                <h2>从题库开始练习</h2>
+                <p>按题号顺序练习，错题会在下次优先出现。</p>
+            </div>
+            <div class="level-grid" id="level-grid">
+                <button class="level-card active" data-level="N3">
+                    <span class="level-code">N3</span><span class="level-name">日语能力考试 N3</span><span class="level-status">710 道题可用</span>
+                </button>
+                <button class="level-card" data-level="N2" disabled>
+                    <span class="level-code">N2</span><span class="level-name">日语能力考试 N2</span><span class="level-status">题库待导入</span>
+                </button>
+                <button class="level-card" data-level="N1" disabled>
+                    <span class="level-code">N1</span><span class="level-name">日语能力考试 N1</span><span class="level-status">题库待导入</span>
+                </button>
+            </div>
+            <div class="home-actions">
+                <span id="bank-count" class="muted">点击开始后加载题目</span>
+                <button id="start-button" class="primary-button">开始练习</button>
+            </div>
+            <p id="home-error" class="error" hidden></p>
+        </section>
+
+        <section id="quiz-view" class="view" hidden>
+            <div class="quiz-header">
+                <button id="quit-button" class="text-button">← 返回题库</button>
+                <span id="progress-label">第 1 / 10 题</span>
+                <span id="score-label">得分 0</span>
+            </div>
+            <div class="progress-track"><span id="progress-bar"></span></div>
+            <article class="question-panel">
+                <div class="question-meta"><span id="question-unit"></span><span id="question-category"></span></div>
+                <h2 id="question-text"></h2>
+                <p id="question-translation" class="translation"></p>
+                <div id="options" class="options"></div>
+                <button id="dont-know-button" class="dont-know-button" type="button">不会，直接看答案</button>
+            </article>
+            <section id="explanation" class="explanation" hidden></section>
+            <p id="quiz-error" class="error" hidden></p>
+        </section>
+
+        <section id="summary-view" class="view" hidden>
+            <div class="summary-icon">✓</div>
+            <p class="eyebrow">练习完成</p>
+            <h2 id="summary-title">本轮练习完成</h2>
+            <div class="summary-score"><strong id="summary-score">0</strong><span> / 10 分</span></div>
+            <p id="summary-detail" class="muted"></p>
+            <button id="again-button" class="primary-button">再练一轮</button>
+            <button id="summary-home-button" class="text-button">选择其他题库</button>
+        </section>
+    </main>
+    <script src="bank.js?v=bank-20261018-3"></script>
+</body>
+</html>
