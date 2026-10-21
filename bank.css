@@ -44,3 +44,5 @@ body { background:var(--bg-page); color:var(--text-primary); font-family:var(--f
 .dont-know-button { display:block; margin:16px auto 0; border:0; background:transparent; color:var(--text-tertiary); font-size:13px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
 .dont-know-button:hover { color:var(--color-primary); }
 .dont-know-button:disabled { opacity:.45; cursor:not-allowed; }
+.remove-wrong-button { display:block; margin:16px auto 0; color:var(--color-primary); }
+.remove-wrong-button:disabled { opacity:.55; cursor:default; }

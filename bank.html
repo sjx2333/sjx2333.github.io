@@ -30,17 +30,26 @@
             <div class="intro">
                 <p class="eyebrow">选择题库</p>
                 <h2>从题库开始练习</h2>
-                <p>按题号顺序练习，错题会在下次优先出现。</p>
+                <p>按题号顺序练习，错题自动进入错题本。</p>
             </div>
             <div class="level-grid" id="level-grid">
-                <button class="level-card active" data-level="N3">
+                <button class="level-card active" data-level="N3" data-wrong-book="false">
                     <span class="level-code">N3</span><span class="level-name">日语能力考试 N3</span><span class="level-status">710 道题可用</span>
                 </button>
-                <button class="level-card" data-level="N2" disabled>
+                <button class="level-card" data-level="N3" data-wrong-book="true">
+                    <span class="level-code">N3</span><span class="level-name">N3 错题本</span><span class="level-status">暂无错题</span>
+                </button>
+                <button class="level-card" data-level="N2" data-wrong-book="false" disabled>
                     <span class="level-code">N2</span><span class="level-name">日语能力考试 N2</span><span class="level-status">题库待导入</span>
                 </button>
-                <button class="level-card" data-level="N1" disabled>
+                <button class="level-card" data-level="N2" data-wrong-book="true" disabled>
+                    <span class="level-code">N2</span><span class="level-name">N2 错题本</span><span class="level-status">暂无错题</span>
+                </button>
+                <button class="level-card" data-level="N1" data-wrong-book="false" disabled>
                     <span class="level-code">N1</span><span class="level-name">日语能力考试 N1</span><span class="level-status">题库待导入</span>
+                </button>
+                <button class="level-card" data-level="N1" data-wrong-book="true" disabled>
+                    <span class="level-code">N1</span><span class="level-name">N1 错题本</span><span class="level-status">题库待导入</span>
                 </button>
             </div>
             <div class="home-actions">
@@ -72,7 +81,7 @@
             <div class="summary-icon">✓</div>
             <p class="eyebrow">练习完成</p>
             <h2 id="summary-title">本轮练习完成</h2>
-            <div class="summary-score"><strong id="summary-score">0</strong><span> / 10 分</span></div>
+            <div class="summary-score"><strong id="summary-score">0</strong><span> 题答对</span></div>
             <p id="summary-detail" class="muted"></p>
             <button id="again-button" class="primary-button">再练一轮</button>
             <button id="summary-home-button" class="text-button">选择其他题库</button>

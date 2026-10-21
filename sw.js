@@ -1,4 +1,4 @@
-const CACHE_NAME = "kotoba-question-bank-v2";
+const CACHE_NAME = "kotoba-question-bank-v3";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -10,6 +10,7 @@ const APP_SHELL = [
     "./manifest.webmanifest",
     "./logo_icon.png",
     "./question_banks/n3.json",
+    "./question_banks/n2.json",
 ];
 
 self.addEventListener("install", (event) => {

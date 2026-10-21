@@ -1,4 +1,4 @@
-const state = { level: "N3", questions: [], index: 0, score: 0, answered: false };
+const state = { level: "N3", wrongBook: false, questions: [], index: 0, score: 0, answered: false };
 const $ = (selector) => document.querySelector(selector);
 
 function escapeHtml(value) {
@@ -116,10 +116,13 @@ async function localApi(url, options = {}) {
     const parts = parsed.pathname.split("/").filter(Boolean);
     const body = options.body ? JSON.parse(options.body) : {};
     const level = String(body.level || parsed.searchParams.get("level") || "N3").toUpperCase();
+    const wrongBook = Boolean(body.wrong_book || parsed.searchParams.get("wrong_book") === "true");
     if (parts.at(-1) === "info") {
         try {
             const bank = await loadLocalBank(level);
-            return { success: true, level, available: true, total: bank.length, units: [...new Set(bank.map((q) => q.scene).filter(Boolean))] };
+            const progress = readLocalProgress().levels[level] || {};
+            const wrongCount = bank.filter((q) => progress[q.bank_source_id]?.wrong && !progress[q.bank_source_id]?.removed_from_wrong_book).length;
+            return { success: true, level, available: true, total: bank.length, wrong_count: wrongCount, units: [...new Set(bank.map((q) => q.scene).filter(Boolean))] };
         } catch {
             return { success: true, level, available: false, total: 0, units: [] };
         }
@@ -127,19 +130,13 @@ async function localApi(url, options = {}) {
     const bank = await loadLocalBank(level);
     const progress = readLocalProgress();
     const levelProgress = progress.levels[level] || {};
-    const today = localToday();
     if (parts.at(-1) === "generate") {
-        const count = Math.max(4, Math.min(Number(body.count) || 10, 30));
-        const wrong = bank.filter((question) => {
-            const item = levelProgress[question.bank_source_id] || {};
-            return item.wrong && !item.correct && item.next_review && item.next_review <= today;
-        });
-        const unseen = bank.filter((question) => {
-            const item = levelProgress[question.bank_source_id] || {};
-            return !item.correct && !item.wrong;
-        });
-        const questions = wrong.concat(unseen).slice(0, count);
-        return { success: true, data: { questions, total: questions.length, source: `${level} 题库`, level, completed: !questions.length } };
+        const count = body.count > 0 ? Math.min(Number(body.count), bank.length) : bank.length;
+        const questions = wrongBook
+            ? bank.filter((question) => levelProgress[question.bank_source_id]?.wrong && !levelProgress[question.bank_source_id]?.removed_from_wrong_book)
+            : bank.filter((question) => !levelProgress[question.bank_source_id]?.correct && !levelProgress[question.bank_source_id]?.wrong);
+        const selected = questions.slice(0, count);
+        return { success: true, data: { questions: selected, total: selected.length, source: wrongBook ? `${level} 错题本` : `${level} 题库`, level, wrong_book: wrongBook, completed: !selected.length } };
     }
     if (parts.at(-1) === "progress") {
         const questionId = String(body.question_id || "");
@@ -147,13 +144,23 @@ async function localApi(url, options = {}) {
         progress.levels[level] ||= {};
         const item = progress.levels[level][questionId] || { wrong: false, correct: false, attempts: 0 };
         const correct = Boolean(body.correct);
+        if (body.action === "remove") {
+            item.removed_from_wrong_book = true;
+            item.wrong = false;
+            item.correct = false;
+            item.removed_at = new Date().toISOString();
+            progress.levels[level][questionId] = item;
+            writeLocalProgress(progress);
+            return { success: true, level, question_id: questionId, status: item };
+        }
         const now = new Date();
         const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         item.attempts = Number(item.attempts || 0) + 1;
         item.last_result = correct ? "correct" : "wrong";
-        item.wrong = !correct; item.correct = correct; item.revealed = Boolean(body.revealed);
+        item.wrong = !correct || (Boolean(body.wrong_book) && Boolean(item.wrong));
+        item.correct = correct && !Boolean(body.wrong_book); item.revealed = Boolean(body.revealed);
         item.answered_at = now.toISOString();
-        item.next_review = correct ? null : `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+        item.next_review = null;
         progress.levels[level][questionId] = item;
         writeLocalProgress(progress);
         return { success: true, level, question_id: questionId, status: item };
@@ -165,7 +172,7 @@ function saveAnswer(question, correct, revealed) {
     return api("/api/question_bank/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level: state.level, question_id: question.bank_source_id, correct, revealed }),
+        body: JSON.stringify({ level: state.level, question_id: question.bank_source_id, correct, revealed, wrong_book: state.wrongBook }),
     }).catch(() => {});
 }
 
@@ -238,6 +245,26 @@ function answer(selected, revealed = false) {
     $("#question-translation").hidden = !translation;
     renderExplanation(question, correct, revealed);
     saveAnswer(question, correct, revealed);
+    if (state.wrongBook) {
+        const remove = document.createElement("button");
+        remove.className = "text-button remove-wrong-button";
+        remove.type = "button";
+        remove.textContent = "移出错题本";
+        remove.onclick = async () => {
+            remove.disabled = true;
+            try {
+                await api("/api/question_bank/progress", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ level: state.level, question_id: question.bank_source_id, action: "remove" }),
+                });
+                remove.textContent = "已移出错题本";
+            } catch {
+                remove.disabled = false;
+            }
+        };
+        $("#explanation").appendChild(remove);
+    }
     const next = document.createElement("button");
     next.className = "primary-button next-button";
     next.textContent = state.index + 1 < state.questions.length ? "下一题" : "查看结果";
@@ -249,9 +276,14 @@ async function loadLevels() {
     for (const card of document.querySelectorAll(".level-card")) {
         try {
             const info = await api(`/api/question_bank/info?level=${card.dataset.level}`);
-            card.querySelector(".level-status").textContent = info.available ? `${info.total} 道题` : "题库待导入";
-            card.disabled = !info.available;
-            if (card.dataset.level === state.level && info.available) $("#bank-count").textContent = `${info.total} 道题可用`;
+            const wrongBook = card.dataset.wrongBook === "true";
+            card.querySelector(".level-status").textContent = info.available
+                ? (wrongBook ? `${info.wrong_count || 0} 道错题` : `${info.total} 道题可用`)
+                : "题库待导入";
+            card.disabled = !info.available || (wrongBook && !info.wrong_count);
+            if (card.dataset.level === state.level && card.dataset.wrongBook === String(state.wrongBook) && info.available) {
+                $("#bank-count").textContent = card.querySelector(".level-status").textContent;
+            }
         } catch { card.querySelector(".level-status").textContent = "读取失败"; }
     }
 }
@@ -262,11 +294,13 @@ async function startQuiz() {
     try {
         const result = await api("/api/question_bank/generate", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ level: state.level, count: 10 }),
+            body: JSON.stringify({ level: state.level, count: 0, wrong_book: state.wrongBook }),
         });
         if (result.data.completed) {
             $("#summary-title").textContent = "本题库已全部完成";
-            $("#summary-detail").textContent = `${state.level} 题库中的题目都已答对。`;
+            $("#summary-detail").textContent = state.wrongBook
+                ? `${state.level} 错题本中暂时没有待复习的题目。`
+                : `${state.level} 题库中的题目都已答对。`;
             showView("summary-view");
             return;
         }
@@ -280,9 +314,9 @@ async function startQuiz() {
 
 function renderSummary() {
     $("#progress-bar").style.width = "100%";
-    $("#summary-title").textContent = "本轮练习完成";
+    $("#summary-title").textContent = state.wrongBook ? "错题本练习完成" : "本轮练习完成";
     $("#summary-score").textContent = state.score;
-    $("#summary-detail").textContent = `${state.level} 题库 · 共 ${state.questions.length} 题，答对 ${state.score} 题`;
+    $("#summary-detail").textContent = `${state.level}${state.wrongBook ? " 错题本" : " 题库"} · 共 ${state.questions.length} 题，答对 ${state.score} 题`;
     showView("summary-view");
 }
 
@@ -290,12 +324,14 @@ document.querySelectorAll(".level-card").forEach((card) => card.addEventListener
     if (card.disabled) return;
     document.querySelectorAll(".level-card").forEach((item) => item.classList.remove("active"));
     card.classList.add("active"); state.level = card.dataset.level;
-    $("#header-level").textContent = state.level; $("#bank-count").textContent = card.querySelector(".level-status").textContent;
+    state.wrongBook = card.dataset.wrongBook === "true";
+    $("#header-level").textContent = state.wrongBook ? `${state.level} 错题本` : state.level;
+    $("#bank-count").textContent = card.querySelector(".level-status").textContent;
 }));
 $("#start-button").onclick = startQuiz;
-$("#quit-button").onclick = () => showView("home-view");
+$("#quit-button").onclick = () => { showView("home-view"); loadLevels(); };
 $("#again-button").onclick = startQuiz;
-$("#summary-home-button").onclick = () => showView("home-view");
+$("#summary-home-button").onclick = () => { showView("home-view"); loadLevels(); };
 $("#dont-know-button").onclick = () => answer(null, true);
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
